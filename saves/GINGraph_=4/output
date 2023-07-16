@@ -1,0 +1,34 @@
+MyNamespace(batch_size=5, begin=0, dataset_length=50000, dataset_pt='./PTs/dataset_100-1100000_new.pt_0', dataset_split=[0.8, 0.1, 0.1], dataset_use_pt=True, device=device(type='cuda', index=0), drop_ratio=0.1, early_stop=20, early_stop_open=True, emb_dim=256, epochs=200, graph_pooling='sum', learning_rate=0.0001, n_head=3, num_layers=3, num_tasks=1, num_workers=5, output_file=<_io.TextIOWrapper name='saves\\GINGraph_=4\\output' mode='a' encoding='cp936'>, root='./dataset', save_dir='saves\\GINGraph_=4', save_test=True, task_name='GINGraph', weight_decay=5e-06)
+#Params: 1217284
+GINGraphPooling(
+  (gnn_node): GINNodeEmbedding(
+    (atom_encoder): EmbAtomEncoder(
+      (atom_embedding_list): ModuleList(
+        (0): Embedding(119, 256)
+      )
+      (pos_encoder): PosEncoder()
+    )
+    (gnnconvs): ModuleList(
+      (0-2): 3 x GINConv()
+    )
+    (attentionconvs): ModuleList(
+      (0-2): 3 x MultiHeadAttention(
+        (w_qs): Linear(in_features=256, out_features=255, bias=False)
+        (w_ks): Linear(in_features=256, out_features=255, bias=False)
+        (w_vs): Linear(in_features=256, out_features=255, bias=False)
+        (fc): Linear(in_features=255, out_features=256, bias=False)
+        (attention): ScaledDotProductAttention(
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (dropout): Dropout(p=0.1, inplace=False)
+        (layer_norm): LayerNorm((256,), eps=1e-06, elementwise_affine=True)
+      )
+    )
+    (batch_norms): ModuleList(
+      (0-2): 3 x BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (graph_pred_linear): Linear(in_features=256, out_features=1, bias=True)
+)
+=====Epoch 1
+Training...

@@ -15,7 +15,6 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from tqdm import tqdm
 from Asegraph3 import struct2graph
-import multiprocessing
 from multiprocessing import Pool
 
 
@@ -86,7 +85,7 @@ class MyPCQM4MDataset(Dataset):
         pos = torch.from_numpy(graph['positions']).to(torch.float)
         new_pos = torch.from_numpy(graph['new_pos']).to(torch.float)
         core_dic = graph['core_dic']
-        data = Data(x=x, edge_index=edge_index,edge_attr =edge_attr, y=y, pos=pos,new_pos=new_pos, bond_length=bond_length,core_dic=core_dic,num_nodes=num_nodes,AtomNum=AtomNum,smiles=smiles)
+        data = Data(x=x, edge_index=edge_index,edge_attr =edge_attr, y=y, new_pos=new_pos, bond_length=bond_length,num_nodes=num_nodes,)
         return data
 
     def mol_to_asestruct(self,mol):
