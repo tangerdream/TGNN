@@ -43,6 +43,7 @@ def cores(positions,mol):
     mass = np.array(mass).reshape(1, -1)
     id = np.array(id).reshape(1, -1)
     charge=cal_partial_charge(mol).reshape(1,-1)
+    charge=np.nan_to_num(charge,nan=0)
 
     core_mass=mass @ positions/np.sum(mass)#质心
     core_id=id @ positions/np.sum(id)#序号中心
@@ -52,6 +53,9 @@ def cores(positions,mol):
         charge += 1e-5
     core_charge = np.abs(charge) @ positions / np.sum(np.abs(charge))  # 电荷中心（伪）
     core_geometry = np.mean(positions, axis=0).reshape(1,-1)
+    if np.any(np.isnan(core_charge)):
+        print(charge,core_charge)
+
     core_dic = {
         'core_mass': core_mass,
         'core_id': core_id,

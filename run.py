@@ -36,7 +36,8 @@ class MyNamespace(argparse.Namespace):
         self.dataset_pt = './PTs/'
         self.dataset_split=[0.5,0.1,0.1]
         self.begin=0
-        self.dataset_length=50000
+
+
 
 #数据载入
 def load_data(args):
@@ -90,7 +91,7 @@ def train(model, device, loader, optimizer, criterion_fn,epoch,epochs):
         try:
             assert not torch.any(torch.isnan(pred))
         except:
-            print(batch.new_pos,batch.x,batch.y)
+            print(batch.new_pos)
             break
         # print(pred.shape)
         optimizer.zero_grad()  # 清空梯度
@@ -154,6 +155,7 @@ def test(model, device, loader):
 
     y_pred = torch.cat(y_pred, dim=0)  # 拼接预测值列表成一个张量
     return y_pred
+
 
 #log_save
 def prepartion(args):
@@ -263,3 +265,4 @@ if __name__ == '__main__':
     args=MyNamespace()
     main(args)
     print('finish')
+
