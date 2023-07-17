@@ -18,3 +18,5 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 pip install torch_geometric
 
 pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.0.0+cpu.html
+
+有准备好的数据集理论上，直接python run.py即可开始训练
