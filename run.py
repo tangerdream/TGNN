@@ -11,10 +11,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 from Mid import GINGraphPooling
 
+#参数输入
 class MyNamespace(argparse.Namespace):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.batch_size = 10
+        self.batch_size = 5
         self.device=0
         self.drop_ratio=0.1
         self.early_stop=20
@@ -27,20 +28,21 @@ class MyNamespace(argparse.Namespace):
         self.num_workers=5
         self.num_tasks=1
         self.save_test=True
-        self.task_name='GINGraph'
+        self.task_name='GINGraph-test'
         self.weight_decay=0.5e-05
         self.learning_rate=0.00001
         self.root='./dataset'
         self.dataset_use_pt=True
-        self.dataset_pt = './PTs/dataset_100-1100000_new.pt_0'
-        self.dataset_split=[0.8,0.1,0.1]
+        self.dataset_pt = './PTs/'
+        self.dataset_split=[0.5,0.1,0.1]
         self.begin=0
         self.dataset_length=50000
 
+#数据载入
 def load_data(args):
     if  args.dataset_use_pt:
         if os.path.isdir(args.dataset_pt):
-            print(': data loading in dir:',args.dataset_pt)
+            print('data loading in dir:',args.dataset_pt)
             dataset=[]
             for filename in tqdm(os.listdir(args.dataset_pt)):
                 dataset.extend(torch.load(os.path.join(args.dataset_pt,filename)))
@@ -53,13 +55,14 @@ def load_data(args):
         dataset = MyPCQM4MDataset(args.root,save=False,begin=args.begin,length=args.dataset_length)
 
     length=len(dataset)
-    train_idx=int(length*args.dataset_split[0])
-    valid_idx=int(length*(args.dataset_split[0]+args.dataset_split[1]))
+    train_idx=round(length*args.dataset_split[0])
+    valid_idx=round(length*(args.dataset_split[0]+args.dataset_split[1]))
 
     train_data=dataset[0:train_idx]
     valid_data=dataset[train_idx:valid_idx]
     test_data=dataset[valid_idx:-1]
 
+    print('train data:',len(train_data),'valid data:',len(valid_data))
 
     train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
     valid_loader = DataLoader(valid_data, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
@@ -67,7 +70,8 @@ def load_data(args):
 
     return train_loader,valid_loader,test_loader
 
-def train(model, device, loader, optimizer, criterion_fn):
+#trainer
+def train(model, device, loader, optimizer, criterion_fn,epoch,epochs):
     print('on training:')
     model.train()
     loss_accum = 0
@@ -76,12 +80,18 @@ def train(model, device, loader, optimizer, criterion_fn):
     avgP = 0
     avgN = 0
 
-    for step, batch in enumerate(tqdm(loader)):  # 枚举所有批次的数据
+    pbar=tqdm(total = len(loader), desc=f'Epoch {epoch}/{epochs}', unit='it')
+    for step, batch in enumerate(loader):  # 枚举所有批次的数据
         # print(step)
         # print(type(batch))
         batch = batch.to(device)  # 将数据移动到指定的设备
         # print(batch.x)
         pred = model(batch).view(-1, )  # 前向传播，计算预测值
+        try:
+            assert not torch.any(torch.isnan(pred))
+        except:
+            print(batch.new_pos,batch.x,batch.y)
+            break
         # print(pred.shape)
         optimizer.zero_grad()  # 清空梯度
         deltayy=pred-batch.y.view(pred.shape)
@@ -101,12 +111,18 @@ def train(model, device, loader, optimizer, criterion_fn):
         # print(deltayy)
         # print(pred.shape,batch.y.shape)
         loss = criterion_fn(pred, batch.y.view(pred.shape))  # 计算损失
+        assert not torch.any(torch.isnan(loss))
+
+        pbar.set_postfix({'loss' : '{0:1.5f}'.format(loss)}) #在进度条后显示当前batch的损失
+        pbar.update(1) #更当前进度，1表示完成了一个batch的训练
+
         loss.backward()  # 反向传播，计算梯度
         optimizer.step()  # 更新模型参数
         loss_accum += loss.detach().cpu().item()  # 累加损失值
 
     return loss_accum / (step + 1),maxP,minN,avgP / (step + 1),avgN / (step + 1)
 
+#evaluator
 def eval(model, device, loader, evaluator):
     model.eval()
     y_true = []
@@ -125,6 +141,7 @@ def eval(model, device, loader, evaluator):
     input_dict = {"y_true": y_true, "y_pred": y_pred}  # 构造输入字典
     return evaluator.eval(input_dict)["mae"]
 
+#tester
 def test(model, device, loader):
     model.eval()
     y_pred = []
@@ -138,6 +155,7 @@ def test(model, device, loader):
     y_pred = torch.cat(y_pred, dim=0)  # 拼接预测值列表成一个张量
     return y_pred
 
+#log_save
 def prepartion(args):
     save_dir = os.path.join('saves', args.task_name+'_')
     if os.path.exists(save_dir):
@@ -152,6 +170,7 @@ def prepartion(args):
     args.output_file = open(os.path.join(args.save_dir, 'output'), 'a')
     print(args, file=args.output_file, flush=True)
 
+#main
 def main(args):
     prepartion(args)
     nn_params = {
@@ -195,7 +214,7 @@ def main(args):
 
         print("=====Epoch {}".format(epoch), file=args.output_file, flush=True)
         print('Training...', file=args.output_file, flush=True)
-        train_mae,maxP,minN,avgP,avgN = train(model, device, train_loader, optimizer, criterion_fn)
+        train_mae,maxP,minN,avgP,avgN = train(model, device, train_loader, optimizer, criterion_fn,epoch,args.epochs)
         print(train_mae,maxP,minN,avgP,avgN)
         print('Evaluating...', file=args.output_file, flush=True)
         valid_mae = eval(model, device, valid_loader, evaluator)
@@ -241,6 +260,6 @@ def main(args):
 
 if __name__ == '__main__':
     # args=p_args()
-    args = MyNamespace()
+    args=MyNamespace()
     main(args)
     print('finish')
