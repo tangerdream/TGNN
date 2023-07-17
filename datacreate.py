@@ -26,7 +26,7 @@ RDLogger.DisableLog('rdApp.*')
 
 class MyPCQM4MDataset(Dataset):
 
-    def __init__(self, root,save=False,cover=False,ptname='my_dataset.pt',length=1000,seed=20,begin=1,num_jobs=5,divid=True):
+    def __init__(self, root,save=False,cover=False,ptname='my_dataset.pt',length=1000,seed=20,begin=1,num_jobs=5,divid=True,maxnodes=50,maxAttempts=100):
         self.url = 'http://dgl-data.s3-accelerate.amazonaws.com/dataset/OGB-LSC/pcqm4m_kddcup2021.zip'
         super(MyPCQM4MDataset, self).__init__(root)
 
@@ -38,6 +38,8 @@ class MyPCQM4MDataset(Dataset):
         self.ptname=ptname
         self.seed=seed
         self.divid=divid
+        self.maxnodes=maxnodes
+        self.maxAttempts=maxAttempts
         if save:
             print('beginning save from %i'%(begin)+' to %i'%(begin+length-1)+' whit num_jobs=%i'%(num_jobs)+' ptname=%s'%(ptname)+' divid=%s'%(str(divid)))
             self.savept(length,begin,num_jobs)
@@ -66,11 +68,11 @@ class MyPCQM4MDataset(Dataset):
         except:
             mol = Chem.MolFromSmiles(smiles)
             mol = Chem.AddHs(mol)
-            AllChem.EmbedMolecule(mol, maxAttempts=1000)
+            AllChem.EmbedMolecule(mol, maxAttempts=self.maxAttempts)
             AllChem.MMFFOptimizeMolecule(mol)
         struct = self.mol_to_asestruct(mol)
 
-        graph = struct2graph(struct,mol,maxnodes=50)
+        graph = struct2graph(struct,mol,maxnodes=self.maxnodes)
         assert(len(graph['bond_length']) == graph['edge_index'].shape[1])
         assert(len(graph['node_feat']) == graph['num_nodes'])
 
@@ -136,6 +138,7 @@ class MyPCQM4MDataset(Dataset):
         for idx in range(0,len(dic)):
             try:
                 data.append(self.get(idx))
+                assert not torch.any(torch.isnan(data[-1].new_pos))
             except:
                 pass
             # if idx in timetable:

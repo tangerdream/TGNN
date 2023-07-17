@@ -47,10 +47,10 @@ def cores(positions,mol):
     core_mass=mass @ positions/np.sum(mass)#质心
     core_id=id @ positions/np.sum(id)#序号中心
 
-    if np.sum(np.abs(charge))!=0:
-        core_charge = np.abs(charge) @ positions / np.sum(np.abs(charge))  # 电荷中心（伪）
-    else:
-        core_charge = np.abs(charge) @ positions / (np.sum(np.abs(charge)) + 1e-7)
+
+    if np.sum(np.abs(charge))==0:
+        charge += 1e-5
+    core_charge = np.abs(charge) @ positions / np.sum(np.abs(charge))  # 电荷中心（伪）
     core_geometry = np.mean(positions, axis=0).reshape(1,-1)
     core_dic = {
         'core_mass': core_mass,
