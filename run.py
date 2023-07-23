@@ -1,15 +1,16 @@
 import os
 import argparse
-
+from torch.utils.tensorboard import SummaryWriter
 from torch_geometric.loader import DataLoader
 import time
 import torch
 from datacreate import MyPCQM4MDataset
 from GEvaluator import Evaluator
 from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
 
 from Mid import GINGraphPooling
+print('torch version:',torch.__version__)
+
 
 #参数输入
 class MyNamespace(argparse.Namespace):
@@ -25,16 +26,16 @@ class MyNamespace(argparse.Namespace):
         self.graph_pooling='sum'
         self.num_layers=3
         self.n_head=3
-        self.num_workers=5
+        self.num_workers=1
         self.num_tasks=1
         self.save_test=True
-        self.task_name='GINGraph-test'
+        self.task_name='GINGraph-test-v100'
         self.weight_decay=0.5e-05
         self.learning_rate=0.00001
         self.root='./dataset'
         self.dataset_use_pt=True
         self.dataset_pt = './PTs/'
-        self.dataset_split=[0.5,0.1,0.1]
+        self.dataset_split=[0.7,0.2,0.1]
         self.begin=0
 
 
@@ -198,11 +199,12 @@ def main(args):
     model = GINGraphPooling(**nn_params).to(device)
 
     num_params = sum(p.numel() for p in model.parameters())
+    print('train data:', len(train_loader), 'valid data:', len(valid_loader), file=args.output_file, flush=True)
     print(f'#Params: {num_params}', file=args.output_file, flush=True)
     print(model, file=args.output_file, flush=True)
 
     optimizer =  torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.25)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.9)
 
 
     writer = SummaryWriter(log_dir=args.save_dir)
@@ -212,9 +214,9 @@ def main(args):
 
     for epoch in range(1, args.epochs + 1):
 
-        print('epoch:', epoch,time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) )
+        print('=====epoch:', epoch,time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) )
 
-        print("=====Epoch {}".format(epoch), file=args.output_file, flush=True)
+        print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),"=====Epoch {}".format(epoch), file=args.output_file, flush=True)
         print('Training...', file=args.output_file, flush=True)
         train_mae,maxP,minN,avgP,avgN = train(model, device, train_loader, optimizer, criterion_fn,epoch,args.epochs)
         print(train_mae,maxP,minN,avgP,avgN)

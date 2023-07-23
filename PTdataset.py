@@ -2,10 +2,10 @@ from datacreate import MyPCQM4MDataset
 if '__main__' == __name__:
     param={
         'root':'./dataset',
-        'ptname':'./PTs/dataset_100-1050000_new.pt',
-        'length':50000,
-        'begin':1000000,
-        'num_jobs':10,
+        'ptname':'./PTdata/5-10w/dataset_105-1600000_new.pt',
+        'length':550000,
+        'begin':1050001,
+        'num_jobs':15,
         'seed':20,
         'save':True,
         'cover':True,
