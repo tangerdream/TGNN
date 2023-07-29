@@ -15,7 +15,7 @@ print('torch version:',torch.__version__)
 class MyNamespace(argparse.Namespace):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.batch_size = 10
+        self.batch_size = 20
         self.device=0
         self.drop_ratio=0.1
         self.early_stop=30
@@ -28,17 +28,17 @@ class MyNamespace(argparse.Namespace):
         self.num_workers=5
         self.num_tasks=1
         self.save_test=True
-        self.task_name='GINGraph-con-v100'
+        self.task_name='GINGraph-con2-v100'
         self.weight_decay=0.5e-05
         self.learning_rate=0.0001
         self.root='./dataset'
         self.dataset_use_pt=True
-        self.dataset_pt = './newPTs/'
+        self.dataset_pt = '/home/ml/hctang/TGNN/PTdata/160-200w/'
         self.dataset_split=[0.8,0.19,0.01]
         self.begin=0
         self.evaluate_epoch=3
         self.continue_train=True
-        self.checkpoint_path='./saves/GINGraph-test-v100_/checkpoint.pt'
+        self.checkpoint_path='./saves/GINGraph-con-v100_/checkpoint.pt'
 
 
 
@@ -212,7 +212,6 @@ def main(args):
         'drop_ratio': args.drop_ratio,
         'graph_pooling': args.graph_pooling,
         'num_tasks':args.num_tasks,
-        'batchsize':args.batch_size
 
     }
 
@@ -240,8 +239,9 @@ def main(args):
     writer = SummaryWriter(log_dir=args.save_dir)
 
     not_improved = 0
-    evaluate=args.evaluate_epoch
+    evaluate=1
     best_valid_mae = 9999
+    valid_mae=10000
 
     for epoch in range(1, args.epochs + 1):
 

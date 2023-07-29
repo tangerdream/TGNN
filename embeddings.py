@@ -6,59 +6,59 @@ from Present import get_bond_feature_dims,get_atom_feature_dims
 full_atom_feature_dims = get_atom_feature_dims()
 full_bond_feature_dims = get_bond_feature_dims()
 
-class PositionalEncoding(nn.Module):
-    """
-    Implements the sinusoidal positional encoding for
-    non-recurrent neural networks.
-
-    Implementation based on "Attention Is All You Need"
-    :cite:`DBLP:journals/corr/VaswaniSPUJGKP17`
-
-    Args:
-       dropout_prob (float): dropout parameter
-       dim (int): embedding size
-    """
-
-    def __init__(self, num_embeddings:list, embedding_dim, dropout_prob=0., padding_idx=0):
-        super(PositionalEncoding, self).__init__()
-
-        # pe = torch.zeros(max_len, dim)
-        # position = torch.arange(0, max_len).unsqueeze(1)
-        # div_term = torch.exp((torch.arange(0, dim, 2) *
-        #                      -(math.log(10000.0) / dim)).float())
-        # pe[:, 0::2] = torch.sin(position.float() * div_term)
-        # pe[:, 1::2] = torch.cos(position.float() * div_term)
-        # pe = pe.unsqueeze(0)
-
-        self.num_embeddings = num_embeddings
-        self.embedding_dim = embedding_dim
-        self.embedding_list = nn.ModuleList()
-        self.weight=[]
-
-        for i,dim in enumerate(num_embeddings):
-            embedding = nn.Embedding(dim, embedding_dim, padding_idx=padding_idx)
-            # torch.nn.init.xavier_uniform_(embbedding.weight.data)#初始化函数，会吧padding的0给抹掉
-            self.embedding_list.append(embedding)
-            self.weight.append(embedding.weight)
-        # self.register_buffer('pe', pe)
-        self.dropout = nn.Dropout(p=dropout_prob)
-        self.dim = embedding_dim
-
-    def forward(self, x, pos=None):
-        xx=0
-        #xx.shape[batchsize,length,feature_size]
-        for i in range(x.shape[2]):
-            print(i)
-            xx += self.embedding_list[i](x[:,:,i])
-        # x.shape = [2, 29, 128] - -[batchsize, maxlen, d_model]
-        xx = xx * math.sqrt(self.dim)
-        if pos is None:
-            pass
-        else:
-            print('xx',xx.shape)
-            xx = xx + self.pe(pos)
-        xx = self.dropout(xx)
-        return xx
+# class PositionalEncoding(nn.Module):
+#     """
+#     Implements the sinusoidal positional encoding for
+#     non-recurrent neural networks.
+#
+#     Implementation based on "Attention Is All You Need"
+#     :cite:`DBLP:journals/corr/VaswaniSPUJGKP17`
+#
+#     Args:
+#        dropout_prob (float): dropout parameter
+#        dim (int): embedding size
+#     """
+#
+#     def __init__(self, num_embeddings:list, embedding_dim, dropout_prob=0., padding_idx=0):
+#         super(PositionalEncoding, self).__init__()
+#
+#         # pe = torch.zeros(max_len, dim)
+#         # position = torch.arange(0, max_len).unsqueeze(1)
+#         # div_term = torch.exp((torch.arange(0, dim, 2) *
+#         #                      -(math.log(10000.0) / dim)).float())
+#         # pe[:, 0::2] = torch.sin(position.float() * div_term)
+#         # pe[:, 1::2] = torch.cos(position.float() * div_term)
+#         # pe = pe.unsqueeze(0)
+#
+#         self.num_embeddings = num_embeddings
+#         self.embedding_dim = embedding_dim
+#         self.embedding_list = nn.ModuleList()
+#         self.weight=[]
+#
+#         for i,dim in enumerate(num_embeddings):
+#             embedding = nn.Embedding(dim, embedding_dim, padding_idx=padding_idx)
+#             # torch.nn.init.xavier_uniform_(embbedding.weight.data)#初始化函数，会吧padding的0给抹掉
+#             self.embedding_list.append(embedding)
+#             self.weight.append(embedding.weight)
+#         # self.register_buffer('pe', pe)
+#         self.dropout = nn.Dropout(p=dropout_prob)
+#         self.dim = embedding_dim
+#
+#     def forward(self, x, pos=None):
+#         xx=0
+#         #xx.shape[batchsize,length,feature_size]
+#         for i in range(x.shape[2]):
+#             print(i)
+#             xx += self.embedding_list[i](x[:,:,i])
+#         # x.shape = [2, 29, 128] - -[batchsize, maxlen, d_model]
+#         xx = xx * math.sqrt(self.dim)
+#         if pos is None:
+#             pass
+#         else:
+#             print('xx',xx.shape)
+#             xx = xx + self.pe(pos)
+#         xx = self.dropout(xx)
+#         return xx
 
 class PosEncoder(nn.Module):
     def __init__(self,emb_dim):

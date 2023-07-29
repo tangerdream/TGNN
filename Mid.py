@@ -11,7 +11,7 @@ class GINNodeEmbedding(torch.nn.Module):
         node representations
     """
 
-    def __init__(self, num_layers, emb_dim,n_head, batchsize,drop_ratio=0.1, JK="last", residual=False,attention=True):
+    def __init__(self, num_layers, emb_dim,n_head, drop_ratio=0.1, JK="last", residual=False,attention=True):
         """GIN Node Embedding Module"""
 
         super(GINNodeEmbedding, self).__init__()
@@ -20,7 +20,7 @@ class GINNodeEmbedding(torch.nn.Module):
         self.JK = JK
         self.emb_dim=emb_dim
         self.attention=attention
-        self.bz=batchsize
+
 
         # add residual connection or not
         self.residual = residual
@@ -53,7 +53,7 @@ class GINNodeEmbedding(torch.nn.Module):
             h = self.batch_norms[layer](h)
             if self.attention:
 
-                h = h.view(self.bz, -1, self.emb_dim)
+                h = h.view(len(batched_data), -1, self.emb_dim)
                 # print(h.shape)
                 h,*_ = self.attentionconvs[layer](h,h,h)
                 # print(num_nodes)
@@ -87,7 +87,7 @@ from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_poo
 
 class GINGraphPooling(nn.Module):
 
-    def __init__(self, num_tasks=1, num_layers=3, emb_dim=128, n_head=3, batchsize=1,residual=False, drop_ratio=0.1,attention=True, JK="last", graph_pooling="mean"):
+    def __init__(self, num_tasks=1, num_layers=3, emb_dim=128, n_head=3, residual=False, drop_ratio=0.1,attention=True, JK="last", graph_pooling="mean"):
         """GIN Graph Pooling Module
         Args:
             num_tasks (int, optional): number of labels to be predicted. Defaults to 1 (控制了图表征的维度，dimension of graph representation).
@@ -113,7 +113,7 @@ class GINGraphPooling(nn.Module):
         if self.num_layers < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
-        self.gnn_node = GINNodeEmbedding(num_layers, emb_dim,n_head,batchsize,drop_ratio=drop_ratio,JK=JK,attention=attention, residual=residual)
+        self.gnn_node = GINNodeEmbedding(num_layers, emb_dim,n_head,drop_ratio=drop_ratio,JK=JK,attention=attention, residual=residual)
 
         # Pooling function to generate whole-graph embeddings
         if graph_pooling == "sum":
