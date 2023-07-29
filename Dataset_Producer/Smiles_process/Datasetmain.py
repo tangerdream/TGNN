@@ -71,7 +71,7 @@ class SmilesProcess(Dataset):
             length = len(self.smiles_list)
         if save:
             print('beginning save from %i' % (begin) + ' to %i' % (begin + length - 1) + ' whit num_jobs=%i' % (
-                num_jobs) + ' ptname=%s' % (outputdir + ptname) + ' divid=%s' % (str(divid)))
+                num_jobs) + self.processed_file_names() + ' divid=%s' % (str(divid)))
             self.savept(length, begin, num_jobs)
 
     def len(self):
