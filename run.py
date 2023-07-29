@@ -4,65 +4,71 @@ from torch.utils.tensorboard import SummaryWriter
 from torch_geometric.loader import DataLoader
 import time
 import torch
-from datacreate import MyPCQM4MDataset
 from GEvaluator import Evaluator
 from tqdm import tqdm
-
 from Mid import GINGraphPooling
 print('torch version:',torch.__version__)
+
 
 
 #参数输入
 class MyNamespace(argparse.Namespace):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.batch_size = 5
+        self.batch_size = 20
         self.device=0
         self.drop_ratio=0.1
-        self.early_stop=20
+        self.early_stop=30
         self.early_stop_open = True
         self.emb_dim=256
         self.epochs=200
         self.graph_pooling='sum'
         self.num_layers=3
         self.n_head=3
-        self.num_workers=1
+        self.num_workers=5
         self.num_tasks=1
         self.save_test=True
-        self.task_name='GINGraph-test-v100'
+        self.task_name='GINGraph-con2-v100'
         self.weight_decay=0.5e-05
-        self.learning_rate=0.00001
-        self.root='./dataset'
-        self.dataset_use_pt=True
-        self.dataset_pt = './PTs/'
-        self.dataset_split=[0.7,0.2,0.1]
+        self.learning_rate=0.0001
+        self.root='./Dataset_Producer/Smiles_process/data.csv.gz'
+        self.data_type='smiles'
+        # self.producer='SmilesProcess'
+        # self.y_name = 'homolumogap'
+        # self.dataset_use_pt=True
+        self.dataset_pt = '/home/ml/hctang/TGNN/PTdata/160-200w/'
+        self.dataset_split=[0.8,0.19,0.01]
         self.begin=0
+        self.evaluate_epoch=3
+        self.continue_train=True
+        self.checkpoint_path='./saves/GINGraph-con-v100_/checkpoint.pt'
 
 
 
 #数据载入
 def load_data(args):
-    if  args.dataset_use_pt:
-        if os.path.isdir(args.dataset_pt):
-            print('data loading in dir:',args.dataset_pt)
-            dataset=[]
-            for filename in tqdm(os.listdir(args.dataset_pt)):
-                dataset.extend(torch.load(os.path.join(args.dataset_pt,filename)))
-                # print(len(dataset))
-        else:
-            print('data loading in .pt:', args.dataset_pt)
-            dataset=torch.load(args.dataset_pt)
+
+    if os.path.isdir(args.dataset_pt):
+        print('data loading in dir:',args.dataset_pt)
+        dataset=[]
+        for filename in tqdm(os.listdir(args.dataset_pt)):
+            dataset.extend(torch.load(os.path.join(args.dataset_pt,filename)))
+            # print(len(dataset))
     else:
-        print('MyPCQM4MDataset: data loading from',args.begin,'to',args.begin+args.dataset_length)
-        dataset = MyPCQM4MDataset(args.root,save=False,begin=args.begin,length=args.dataset_length)
+        print('data loading in .pt:', args.dataset_pt)
+        dataset=torch.load(args.dataset_pt)
+    # else:
+    #     print('Dataset: data loading from',args.begin,'to',args.begin+args.dataset_length)
+    #     dataset = eval(args.producer)(args.root,args.y_name,save=False,begin=args.begin,length=args.dataset_length)
 
     length=len(dataset)
     train_idx=round(length*args.dataset_split[0])
     valid_idx=round(length*(args.dataset_split[0]+args.dataset_split[1]))
+    test_idx = round(length * (args.dataset_split[0]+args.dataset_split[1] + args.dataset_split[2]))
 
     train_data=dataset[0:train_idx]
     valid_data=dataset[train_idx:valid_idx]
-    test_data=dataset[valid_idx:-1]
+    test_data=dataset[valid_idx:test_idx]
 
     print('train data:',len(train_data),'valid data:',len(valid_data))
 
@@ -71,6 +77,7 @@ def load_data(args):
     test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 
     return train_loader,valid_loader,test_loader
+
 
 #trainer
 def train(model, device, loader, optimizer, criterion_fn,epoch,epochs):
@@ -129,14 +136,22 @@ def eval(model, device, loader, evaluator):
     model.eval()
     y_true = []
     y_pred = []
-
+    pbar = tqdm(total=len(loader), desc=f'Evaluating:', unit='it')
     with torch.no_grad():  # 禁用梯度计算，加速模型运算
         for _, batch in enumerate(loader):  # 枚举所有批次的数据
             # print('test',type(batch))
             batch = batch.to(device)  # 将数据移动到指定的设备
             pred = model(batch).view(-1, )  # 前向传播，计算预测值
-            y_true.append(batch.y.view(pred.shape).detach().cpu())  # 将真实值添加到列表中
-            y_pred.append(pred.detach().cpu())  # 将预测值添加到列表中
+            try:
+                assert not torch.any(torch.isnan(pred))
+                y_true.append(batch.y.view(pred.shape).detach().cpu())  # 将真实值添加到列表中
+                y_pred.append(pred.detach().cpu())  # 将预测值添加到列表中
+            except:
+                print(batch.new_pos,batch.x)
+                pass
+            pbar.update(1)  # 更当前进度，1表示完成了一个batch的训练
+    print('Evaluate finish')
+
 
     y_true = torch.cat(y_true, dim=0)  # 拼接真实值列表成一个张量
     y_pred = torch.cat(y_pred, dim=0)  # 拼接预测值列表成一个张量
@@ -147,14 +162,24 @@ def eval(model, device, loader, evaluator):
 def test(model, device, loader):
     model.eval()
     y_pred = []
+    pbar = tqdm(total=len(loader), desc=f'Testing:', unit='it')
 
     with torch.no_grad():  # 禁用梯度计算，加速模型运算
         for _, batch in enumerate(loader):  # 枚举所有批次的数据
             batch = batch.to(device)  # 将数据移动到指定的设备
             pred = model(batch).view(-1, )  # 前向传播，计算预测值
-            y_pred.append(pred.detach().cpu())  # 将预测值添加到列表中
+            # print(pred)
+            try:
+                assert not torch.any(torch.isnan(pred))
+                y_pred.append(pred.detach().cpu())  # 将预测值添加到列表中
+            except:
+                print(batch.new_pos,batch.x)
+                pass
+            pbar.update(1)
 
+    # print('y_pred:',y_pred)
     y_pred = torch.cat(y_pred, dim=0)  # 拼接预测值列表成一个张量
+    print('Test finish')
     return y_pred
 
 
@@ -173,6 +198,14 @@ def prepartion(args):
     args.output_file = open(os.path.join(args.save_dir, 'output'), 'a')
     print(args, file=args.output_file, flush=True)
 
+def continue_train(args,model,optimizer):
+    print('loading modle from',args.checkpoint_path)
+    checkpoint = torch.load(args.checkpoint_path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    print('Load finish')
+
+
 #main
 def main(args):
     prepartion(args)
@@ -183,7 +216,7 @@ def main(args):
         'drop_ratio': args.drop_ratio,
         'graph_pooling': args.graph_pooling,
         'num_tasks':args.num_tasks,
-        'batchsize':args.batch_size
+        'data_type':args.data_type
 
     }
 
@@ -197,20 +230,23 @@ def main(args):
     device = args.device
 
     model = GINGraphPooling(**nn_params).to(device)
+    optimizer =  torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.9)
+    if args.continue_train:
+        continue_train(args,model,optimizer)
 
     num_params = sum(p.numel() for p in model.parameters())
     print('train data:', len(train_loader), 'valid data:', len(valid_loader), file=args.output_file, flush=True)
     print(f'#Params: {num_params}', file=args.output_file, flush=True)
     print(model, file=args.output_file, flush=True)
 
-    optimizer =  torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.9)
-
 
     writer = SummaryWriter(log_dir=args.save_dir)
 
     not_improved = 0
+    evaluate=1
     best_valid_mae = 9999
+    valid_mae=10000
 
     for epoch in range(1, args.epochs + 1):
 
@@ -221,7 +257,9 @@ def main(args):
         train_mae,maxP,minN,avgP,avgN = train(model, device, train_loader, optimizer, criterion_fn,epoch,args.epochs)
         print(train_mae,maxP,minN,avgP,avgN)
         print('Evaluating...', file=args.output_file, flush=True)
-        valid_mae = eval(model, device, valid_loader, evaluator)
+        if epoch==evaluate:
+            valid_mae = eval(model, device, valid_loader, evaluator)
+            evaluate += args.evaluate_epoch
 
         print({'Train': train_mae, 'Validation': valid_mae}, file=args.output_file, flush=True)
 
@@ -235,6 +273,7 @@ def main(args):
 
 
         if valid_mae < best_valid_mae:
+            print('valid_mae:',valid_mae,'Saving checkpoint...')
             best_valid_mae = valid_mae
             if args.save_test:
                 print('Saving checkpoint...', file=args.output_file, flush=True)

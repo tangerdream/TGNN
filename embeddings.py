@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import math
-from Present import get_bond_feature_dims,get_atom_feature_dims
+from Dataset_Producer.Smiles_process.Present import get_bond_feature_dims,get_atom_feature_dims
 
 full_atom_feature_dims = get_atom_feature_dims()
 full_bond_feature_dims = get_bond_feature_dims()
@@ -60,7 +60,7 @@ full_bond_feature_dims = get_bond_feature_dims()
 #         xx = self.dropout(xx)
 #         return xx
 
-class PosEncoder(nn.Module):
+class PosEncoder(torch.nn.Module):
     def __init__(self,emb_dim):
         super(PosEncoder, self).__init__()
         self.emb_dim=emb_dim
@@ -107,7 +107,7 @@ class EmbAtomEncoder(torch.nn.Module):
     记`N`为原子属性的维度，则原子属性表示为`[x1, x2, ..., xi, xN]`，其中任意的一维度`xi`都是类别型数据。full_atom_feature_dims[i]存储了原子属性`xi`的类别数量。
     该类将任意的原子属性`[x1, x2, ..., xi, xN]`转换为原子的嵌入`x_embedding`（维度为emb_dim）。
     """
-    def __init__(self, emb_dim): # 初始化函数，接受一个emb_dim参数
+    def __init__(self, emb_dim,n_features): # 初始化函数，接受一个emb_dim参数
         super(EmbAtomEncoder, self).__init__()
 
         # 创建一个ModuleList对象，用于存储不同属性的embedding
@@ -115,8 +115,8 @@ class EmbAtomEncoder(torch.nn.Module):
         self.pos_encoder = PosEncoder(emb_dim)
 
         # 遍历full_atom_feature_dims列表中的每个元素，并为每个属性创建一个embedding
-        for i, dim in enumerate(full_atom_feature_dims):
-            emb = torch.nn.Embedding(dim, emb_dim)  # 不同维度的属性用不同的Embedding方法
+        for i in range(0,n_features):
+            emb = torch.nn.Embedding(full_atom_feature_dims[i], emb_dim)  # 不同维度的属性用不同的Embedding方法
             torch.nn.init.xavier_uniform_(emb.weight.data)  # 初始化权重参数
             self.atom_embedding_list.append(emb)  # 将embedding添加到ModuleList中
 

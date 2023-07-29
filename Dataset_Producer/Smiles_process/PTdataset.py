@@ -10,11 +10,11 @@ if '__main__' == __name__:
             self.use_new_pos = True
             self.y_name = 'homolumogap'
             self.save = True
-            self.cover = False
+            self.cover = True
             self.outputdir = 'F:/OnlinePacket/programfiles/Python/TangerGNN/Transform_rebuild/TGNN/PTs'
             self.ptname = 'my_dataset.pt'
             self.seed = 20
-            self.num_jobs = 5
+            self.num_jobs = 10
             self.divid = True
             self.maxnodes = 50
             self.maxAttempts = 50

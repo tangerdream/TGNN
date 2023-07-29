@@ -84,7 +84,7 @@ class SmilesProcess(Dataset):
         x = torch.from_numpy(x).to(torch.int64)
         assert (len(x) == self.maxnodes)
         edge_index = torch.from_numpy(edge_index_np).to(torch.int64)
-        edge_attr = edge_attr
+        edge_attr = torch.tensor(edge_attr)
         y = torch.Tensor([y])
         num_nodes = int(self.maxnodes)
 

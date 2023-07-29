@@ -11,7 +11,7 @@ class GINNodeEmbedding(torch.nn.Module):
         node representations
     """
 
-    def __init__(self, num_layers, emb_dim,n_head, drop_ratio=0.1, JK="last", residual=False,attention=True):
+    def __init__(self, num_layers, emb_dim,n_head, data_type, drop_ratio=0.1, JK="last", residual=False,attention=True,):
         """GIN Node Embedding Module"""
 
         super(GINNodeEmbedding, self).__init__()
@@ -20,7 +20,10 @@ class GINNodeEmbedding(torch.nn.Module):
         self.JK = JK
         self.emb_dim=emb_dim
         self.attention=attention
-
+        if data_type=='smiles':
+            self.n_features=9
+        elif data_type=='crystal':
+            self.n_features = 1
 
         # add residual connection or not
         self.residual = residual
@@ -28,7 +31,7 @@ class GINNodeEmbedding(torch.nn.Module):
         if self.num_layers < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
-        self.atom_encoder = EmbAtomEncoder(emb_dim) #构建原子表征embedding
+        self.atom_encoder = EmbAtomEncoder(emb_dim,self.n_features) #构建原子表征embedding
         # self.pos_encoder =PosEncoder(emb_dim)
 
         # List of GNNs
@@ -48,7 +51,6 @@ class GINNodeEmbedding(torch.nn.Module):
         # computing input node embedding
         h_list = [self.atom_encoder(x,pos)]  # 先将类别型原子属性转化为原子表征
         for layer in range(self.num_layers):
-
             h = self.gnnconvs[layer](h_list[layer], edge_index, bond_length,edge_attr=edge_attr)
             h = self.batch_norms[layer](h)
             if self.attention:
@@ -87,7 +89,7 @@ from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_poo
 
 class GINGraphPooling(nn.Module):
 
-    def __init__(self, num_tasks=1, num_layers=3, emb_dim=128, n_head=3, residual=False, drop_ratio=0.1,attention=True, JK="last", graph_pooling="mean"):
+    def __init__(self, num_tasks=1, num_layers=3, emb_dim=128, n_head=3, residual=False, drop_ratio=0.1,attention=True, JK="last", graph_pooling="mean", data_type='smiles'):
         """GIN Graph Pooling Module
         Args:
             num_tasks (int, optional): number of labels to be predicted. Defaults to 1 (控制了图表征的维度，dimension of graph representation).
@@ -113,7 +115,7 @@ class GINGraphPooling(nn.Module):
         if self.num_layers < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
-        self.gnn_node = GINNodeEmbedding(num_layers, emb_dim,n_head,drop_ratio=drop_ratio,JK=JK,attention=attention, residual=residual)
+        self.gnn_node = GINNodeEmbedding(num_layers, emb_dim,n_head,data_type,drop_ratio=drop_ratio,JK=JK,attention=attention, residual=residual)
 
         # Pooling function to generate whole-graph embeddings
         if graph_pooling == "sum":

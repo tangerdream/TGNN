@@ -4,12 +4,12 @@ from torch.utils.tensorboard import SummaryWriter
 from torch_geometric.loader import DataLoader
 import time
 import torch
-from datacreate import MyPCQM4MDataset
 from GEvaluator import Evaluator
 from tqdm import tqdm
-
 from Mid import GINGraphPooling
 print('torch version:',torch.__version__)
+
+
 
 #参数输入
 class MyNamespace(argparse.Namespace):
@@ -31,8 +31,11 @@ class MyNamespace(argparse.Namespace):
         self.task_name='GINGraph-con2-v100'
         self.weight_decay=0.5e-05
         self.learning_rate=0.0001
-        self.root='./dataset'
-        self.dataset_use_pt=True
+        self.root='./Dataset_Producer/Smiles_process/data.csv.gz'
+        self.data_type='smiles'
+        # self.producer='SmilesProcess'
+        # self.y_name = 'homolumogap'
+        # self.dataset_use_pt=True
         self.dataset_pt = '/home/ml/hctang/TGNN/PTdata/160-200w/'
         self.dataset_split=[0.8,0.19,0.01]
         self.begin=0
@@ -44,19 +47,19 @@ class MyNamespace(argparse.Namespace):
 
 #数据载入
 def load_data(args):
-    if  args.dataset_use_pt:
-        if os.path.isdir(args.dataset_pt):
-            print('data loading in dir:',args.dataset_pt)
-            dataset=[]
-            for filename in tqdm(os.listdir(args.dataset_pt)):
-                dataset.extend(torch.load(os.path.join(args.dataset_pt,filename)))
-                # print(len(dataset))
-        else:
-            print('data loading in .pt:', args.dataset_pt)
-            dataset=torch.load(args.dataset_pt)
+
+    if os.path.isdir(args.dataset_pt):
+        print('data loading in dir:',args.dataset_pt)
+        dataset=[]
+        for filename in tqdm(os.listdir(args.dataset_pt)):
+            dataset.extend(torch.load(os.path.join(args.dataset_pt,filename)))
+            # print(len(dataset))
     else:
-        print('MyPCQM4MDataset: data loading from',args.begin,'to',args.begin+args.dataset_length)
-        dataset = MyPCQM4MDataset(args.root,save=False,begin=args.begin,length=args.dataset_length)
+        print('data loading in .pt:', args.dataset_pt)
+        dataset=torch.load(args.dataset_pt)
+    # else:
+    #     print('Dataset: data loading from',args.begin,'to',args.begin+args.dataset_length)
+    #     dataset = eval(args.producer)(args.root,args.y_name,save=False,begin=args.begin,length=args.dataset_length)
 
     length=len(dataset)
     train_idx=round(length*args.dataset_split[0])
@@ -74,6 +77,7 @@ def load_data(args):
     test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 
     return train_loader,valid_loader,test_loader
+
 
 #trainer
 def train(model, device, loader, optimizer, criterion_fn,epoch,epochs):
@@ -212,6 +216,7 @@ def main(args):
         'drop_ratio': args.drop_ratio,
         'graph_pooling': args.graph_pooling,
         'num_tasks':args.num_tasks,
+        'data_type':args.data_type
 
     }
 
