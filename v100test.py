@@ -1,14 +1,12 @@
 import os
 import argparse
 from torch.utils.tensorboard import SummaryWriter
-from torch_geometric.loader import DataLoader
 import time
 import torch
 from GEvaluator import Evaluator
-from tqdm import tqdm
 from Mid import GINGraphPooling
+from Module import load_data,train,evaluate,test,prepartion,continue_train
 print('torch version:',torch.__version__)
-from Module import load_data,train,Evaluator,test,prepartion,continue_train
 
 
 #参数输入
@@ -17,38 +15,34 @@ class MyNamespace(argparse.Namespace):
         super().__init__(**kwargs)
         self.batch_size = 20
         self.device=0
-        self.drop_ratio=0.15
+        self.drop_ratio=0.1
         self.early_stop=30
         self.early_stop_open = True
-        self.emb_dim=128
+        self.emb_dim=256
         self.epochs=200
-        self.graph_pooling='mean'
+        self.graph_pooling='sum'
         self.num_layers=3
         self.n_head=3
         self.num_workers=5
         self.num_tasks=1
         self.save_test=True
-        self.task_name='GINGraph2-730-v100'
+        self.task_name='GINGraph_crystal_tes-805-v100'
         self.weight_decay=0.1e-05
-        self.learning_rate=0.0001
-        self.root='./Dataset_Producer/Smiles_process/data.csv.gz'
-        self.data_type='smiles'
-        # self.producer='SmilesProcess'
-        # self.y_name = 'homolumogap'
-        #self.begin=0
-        # self.dataset_use_pt=True
-        self.dataset_pt = '/home/ml/hctang/TGNN/PTdata/200-300w'
+        self.learning_rate=0.00001
+        self.data_type='crystal'  #'smiles','crystal'
+        self.dataset_pt = './PTs/crystal_norm'
         self.dataset_split=[0.8,0.19,0.01]
-        self.evaluate_epoch=2
-        self.continue_train=False
-        self.checkpoint_path='/home/ml/hctang/TGNN/saves/GINGraph2-730-v100_=0/checkpoint.pt'
-        self.job_level='graph' #graph,node
+        self.begin=0
+        self.evaluate_epoch=1
+        self.continue_train=True
+        self.checkpoint_path='/home/ml/hctang/TGNN/saves/GINGraph_crystal_test=9/checkpoint.pt'
+        self.job_level='node' #'graph','node'
+        self.attention=True #是否启用Multi-head self-attention层
 
 
 
 
 
-#main
 def main(args):
     prepartion(args)
     nn_params = {
@@ -60,6 +54,7 @@ def main(args):
         'num_tasks':args.num_tasks,
         'data_type':args.data_type,
         'job_level':args.job_level,
+        'attention':args.attention,
 
     }
 
@@ -87,7 +82,7 @@ def main(args):
     writer = SummaryWriter(log_dir=args.save_dir)
 
     not_improved = 0
-    evaluate=1
+    eva=1
     best_valid_mae = 9999
     valid_mae=10000
 
@@ -100,9 +95,9 @@ def main(args):
         train_mae,maxP,minN,avgP,avgN = train(model, device, train_loader, optimizer, criterion_fn,epoch,args.epochs)
         print(train_mae,maxP,minN,avgP,avgN)
         print('Evaluating...', file=args.output_file, flush=True)
-        if epoch==evaluate:
-            valid_mae = eval(model, device, valid_loader, evaluator)
-            evaluate += args.evaluate_epoch
+        if epoch==eva:
+            valid_mae = evaluate(model, device, valid_loader, evaluator)
+            eva += args.evaluate_epoch
 
         print({'Train': train_mae, 'Validation': valid_mae}, file=args.output_file, flush=True)
 
@@ -115,9 +110,8 @@ def main(args):
         print('valid_mae:',valid_mae,'best_valid_mae:',best_valid_mae)
 
 
-
         if valid_mae < best_valid_mae:
-            print('Saving checkpoint...')
+            print('valid_mae:',valid_mae,'Saving checkpoint...')
             best_valid_mae = valid_mae
             if args.save_test:
                 print('Saving checkpoint...', file=args.output_file, flush=True)

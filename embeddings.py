@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import math
-from Dataset_Producer.Smiles_process.Present import get_bond_feature_dims,get_atom_feature_dims
+from Dataset_Producer.Smiles_producer.Present import get_bond_feature_dims,get_atom_feature_dims
 
 full_atom_feature_dims = get_atom_feature_dims()
 full_bond_feature_dims = get_bond_feature_dims()

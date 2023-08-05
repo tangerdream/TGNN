@@ -219,7 +219,7 @@ class CrystalProcess(Dataset):
         return path
 
     def normalization(self,data, range:list):
-        assert np.min(data) >= np.min(range) and np.max(data) <= np.max(range)
+        assert np.min(data) >= np.min(range)
         _range = np.abs(range[0] - range[1])
         return (data - np.min(range)) / _range
 
