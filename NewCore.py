@@ -9,7 +9,7 @@ from torch_geometric.utils import add_self_loops, degree
 
 
 class GINConv(MessagePassing):
-    def __init__(self, emb_dim):
+    def __init__(self, emb_dim,device=0):
         '''
             emb_dim (int): node embedding dimensionality
         '''
@@ -18,15 +18,17 @@ class GINConv(MessagePassing):
         self.mlp = nn.Sequential(nn.Linear(emb_dim, emb_dim), nn.BatchNorm1d(emb_dim), nn.ReLU(), nn.Linear(emb_dim, emb_dim))
         self.eps = nn.Parameter(torch.Tensor([0]))
         self.bond_encoder = EmbBondEncoder(emb_dim = emb_dim)
-        self.pos_encoder = PosEncoder(emb_dim=emb_dim)
+        self.pos_encoder = PosEncoder(emb_dim=emb_dim,device=device)
+        self.device=device
+        self.emb_dim=emb_dim
 
-    def forward(self, x, edge_index, bond_length, edge_attr=None):
-        if edge_attr==None:
-            edge_attr_embedding = self.pos_encoder(bond_length)
-            # print(edge_attr_embedding.shape)
-        else:
-            edge_attr_embedding = self.bond_encoder(edge_attr) # 先将类别型边属性转换为边表征
+    def forward(self, x, edge_index, bond_length=None, edge_attr=None):
+        edge_attr_embedding = torch.zeros(edge_index.shape[1],self.emb_dim).to(self.device)
+        if bond_length is not None:
             edge_attr_embedding += self.pos_encoder(bond_length)
+            # print(edge_attr_embedding.shape)
+        if edge_attr is not None:
+            edge_attr_embedding += self.bond_encoder(edge_attr) # embbeding
         out = self.mlp((1 + self.eps) *x + self.propagate(edge_index, x=x, edge_attr=edge_attr_embedding))
         return out
 

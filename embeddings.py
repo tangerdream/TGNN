@@ -61,19 +61,20 @@ full_bond_feature_dims = get_bond_feature_dims()
 #         return xx
 
 class PosEncoder(torch.nn.Module):
-    def __init__(self,emb_dim):
+    def __init__(self,emb_dim,device=0):
         super(PosEncoder, self).__init__()
         self.emb_dim=emb_dim
+        self.device=device
 
     def forward(self,pos):
-        pee=torch.zeros(pos.shape[0], self.emb_dim).to(0)
+        pee=torch.zeros(pos.shape[0], self.emb_dim).to(self.device)
 
         for i in range(0,pos.shape[1]):
-            pe = torch.zeros(pos.shape[0], self.emb_dim).to(0)
+            pe = torch.zeros(pos.shape[0], self.emb_dim).to(self.device)
             # print('pe1',pe)
 
             div_term = torch.exp((torch.arange(0, self.emb_dim, 2) *
-                                 -(math.log(10000.0) / self.emb_dim)).float()).to(0)
+                                 -(math.log(10000.0) / self.emb_dim)).float()).to(self.device)
             pe[:,0::2] = torch.sin(pos[:,i].unsqueeze(1).float() * div_term)
             pe[:,1::2] = torch.cos(pos[:,i].unsqueeze(1).float() * div_term)
             # print('pee', pee)
@@ -113,6 +114,7 @@ class EmbAtomEncoder(torch.nn.Module):
         # 创建一个ModuleList对象，用于存储不同属性的embedding
         self.atom_embedding_list = torch.nn.ModuleList()
         self.pos_encoder = PosEncoder(emb_dim)
+        self.n_features=n_features
 
         # 遍历full_atom_feature_dims列表中的每个元素，并为每个属性创建一个embedding
         for i in range(0,n_features):
@@ -125,7 +127,7 @@ class EmbAtomEncoder(torch.nn.Module):
         x_embedding = 0
         x_embedding +=self.pos_encoder(pos)
         # 对于x的第二个维度，即对于每个属性，计算其embedding，并累加
-        for i in range(x.shape[1]):
+        for i in range(self.n_features):
             x_embedding += self.atom_embedding_list[i](x[:, i])
 
         return x_embedding

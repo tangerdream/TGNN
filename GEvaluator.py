@@ -6,7 +6,7 @@ import os.path as osp
 import numpy as np
 
 import torch
-
+# from ogb.lsc import PCQM4MEvaluator
 class Evaluator:
     def __init__(self):
         '''

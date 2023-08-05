@@ -1,0 +1,40 @@
+MyNamespace(batch_size=20, checkpoint_path='/home/ml/hctang/TGNN/saves/GINGraph2-730-v100_=0/checkpoint.pt', continue_train=False, data_type='smiles', dataset_pt='./PTs/smiles_3d', dataset_split=[0.8, 0.19, 0.01], device=device(type='cuda', index=0), drop_ratio=0.15, early_stop=30, early_stop_open=True, emb_dim=128, epochs=2, evaluate_epoch=1, graph_pooling='mean', job_level='graph', learning_rate=0.0001, n_head=3, num_layers=3, num_tasks=1, num_workers=5, output_file=<_io.TextIOWrapper name='saves\\GINGraph_smiles_3d_test\\output' mode='a' encoding='cp936'>, save_dir='saves\\GINGraph_smiles_3d_test', save_test=True, task_name='GINGraph_smiles_3d_test', weight_decay=1e-06)
+train data: 400 valid data: 95
+#Params: 322180
+GINGraphPooling(
+  (gnn_node): GINNodeEmbedding(
+    (atom_encoder): EmbAtomEncoder(
+      (atom_embedding_list): ModuleList(
+        (0): Embedding(119, 128)
+        (1): Embedding(4, 128)
+        (2-3): 2 x Embedding(12, 128)
+        (4): Embedding(10, 128)
+        (5-6): 2 x Embedding(6, 128)
+        (7-8): 2 x Embedding(2, 128)
+      )
+      (pos_encoder): PosEncoder()
+    )
+    (gnnconvs): ModuleList(
+      (0-2): 3 x GINConv()
+    )
+    (attentionconvs): ModuleList(
+      (0-2): 3 x MultiHeadAttention(
+        (w_qs): Linear(in_features=128, out_features=126, bias=False)
+        (w_ks): Linear(in_features=128, out_features=126, bias=False)
+        (w_vs): Linear(in_features=128, out_features=126, bias=False)
+        (fc): Linear(in_features=126, out_features=128, bias=False)
+        (attention): ScaledDotProductAttention(
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (dropout): Dropout(p=0.15, inplace=False)
+        (layer_norm): LayerNorm((128,), eps=1e-06, elementwise_affine=True)
+      )
+    )
+    (batch_norms): ModuleList(
+      (0-2): 3 x BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (graph_pred_linear): Linear(in_features=128, out_features=1, bias=True)
+)
+2023-08-05 03:17:45 =====Epoch 1
+Training...
